@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="main.css">
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,
+     initial-scale=1"/>
+     <title>Quiz JavaScript</title>
+    </head>
+    <body>
+        <div class="matrix-background"></div>
+        <div id="app">
+            <div id="playerSelection" class="screen active">
+                <h1>Select Players</h1>
+                <ul id="The list of the players"></ul>
+                <button id="deletePlayer">Delete Players</button>
+                <button id="addPlayerBtn">Add Player</button>
+                <button id="NextBtn" disabled>Next</button>
+            </div>
+            <div id="Mode" class="screen">
+                <h1>Choose the mode</h1>
+                
+                <div class="Settings">
+                    <p>Subject</p>
+                    <select id="subject" name="subject">
+                        <option value="HTML">HTML</option>
+                        <option value="CSS">CSS</option>
+                        <option value="JS">JS</option>
+                        <option value="Mixed">Mixed</option>
+                    </select>
+                </div>
+                <div class="Settings">
+                    <p>How many questions per player do you want ?</p>
+                    <input type="number" id="nbQuestions" min="3" max="5" value="3">
+                </div>
+                <button id="BackBtn">Back</button>
+                <button id="StartGameBtn">Start Game</button>
+            </div>
+
+            <div id="Questions" class="screen">
+                <h1 id="CurrentPlayer"></h1>
+                <p id="question"></p>
+                <ul id="answers"></ul>
+                <p id="timer">Timer: 10s</p>
+                <button id="submitBtn">Submit</button>
+            </div>
+
+            <div id="Results" class="screen">
+                <h1>Final scores !!!</h1>
+                <ul id="results"></ul>
+                <button id="RestartBtn">Restart</button>
+            </div>
+        </div>
+    
+    <script>
+        const matrixContainer = document.querySelector('.matrix-background');
+  for (let i = 0; i < 100; i++) {
+    const span = document.createElement('span');
+    span.style.setProperty('--x', Math.random() * 100);
+    span.style.setProperty('--y', Math.random() * 10);
+    span.textContent = Math.random() > 0.5 ? '1' : '0';
+    matrixContainer.appendChild(span);
+  }
+        const playersList = [];
+        const playersScores = {};
+        const QuestionsList = {
+            HTML: [
+            {question : "What does HTML mean ?", options : ["Hyperlinks and Text Markup Language","Hyper Text Markup Language","Home Tool Markup Language","none"], answer: 1},
+            {question : "What HTML element is making the largest heading ?", options: ["<head>","<h3>","<header>","<h1>"], answer: 3},
+            {question : "What HTML tag is known as a paragraph tag ?", options : ["<p>","<par>","<a>","<body>"], answer : 0},
+            {question : "What is the first thing appearing on your HMTL code ?", options : ["<head>","<html>","<title>","<!doctype html>"], answer: 3},
+            {question : "How can you make an ordered list ?", options: ["<ul>","<dl>","<ol>","<li>"], answer: 2},
+            ],
+            CSS: [
+            {question : "What does CSS mean ?", options: ["Computer Style Sheets","Cascading Style Sheets","Creative Style Sheets","Colorful Style Sheets"],answer: 1},
+            {question : "Which syntax is correct ?", options: ["body{color: blue;}","{body: color: blue;}","body{color, blue;}","body{color: blue,}"], answer: 0},
+            {question : "How do you insert a comment in CSS ?", options: ["--","//","/*","<--"], answer: 2},
+            {question : "How do you modify the background ?", options: ["background-color","color","color-backgroung","background-style"], answer:0},
+            {question : "How do you add a color on the border of an image ?", options: ["border-color","border","border-line","border-decoration"],answer:0},
+            ],
+            JS: [
+            {question : "How can you show a message in javascript ?", options: ["console.log","print","console.WriteLine","return"], answer:0},
+            {question : "What of the followings change a string into an int ?", options: ["ToInt","ParseInt","ToNum","ParseFloat"], answer:1},
+            {question : "In what Html part can you write your JS code ?", options: ["<head>","<p>","<body>","<javascript>"], answer:2},
+            {question : "What tag is used to write a JS code in a HTML file ?", options:["<script>","<javascript>","JavaScript>","java"], answer:0},
+            {question : "How do you make an alert message ?", options:["print","alertbox","msgalert","alert"], answer:3},
+            ]
+        }
+
+        //  DOM
+        const screens = document.querySelectorAll('.screen');
+        const Players = document.getElementById('The list of the players');
+        const DeleteBtn = document.getElementById('deletePlayer');
+        const addPlayerBtn = document.getElementById('addPlayerBtn');
+        const NextBtn = document.getElementById('NextBtn'); 
+        const BackBtn = document.getElementById('BackBtn');
+        const StartGameBtn = document.getElementById('StartGameBtn');
+        const SubmitBtn = document.getElementById('submitBtn');
+        const RestartBtn = document.getElementById('RestartBtn');
+        const Timer = document.getElementById('timer');
+        const CurrentPlayer = document.getElementById('CurrentPlayer');
+        const Question = document.getElementById('question');
+        const Answers = document.getElementById('answers');
+        const Results = document.getElementById('results');
+
+        let playerIndex = 0;
+        let questionIndex = 0;
+        let Subject = '';
+        let nbQuestion = 3;
+        let timer;
+        let TimeLeft = 10;
+        let QuestionsSelected = [];
+        for (let i =0 ; i <playersList.length; i++){
+            playersScores[playersList[i]] = 0;
+        }
+        
+
+        function showScreen(index) {
+            screens.forEach((screen, i) => screen.classList.toggle('active', i === index));
+        }
+
+        function updatePlayerList(){
+            Players.innerHTML = '';
+            playersList.forEach((player, index) => {
+                const participant = document.createElement('li')
+                participant.textContent = `${player}`;
+                participant.className = 'player';
+                Players.appendChild(participant);
+            });
+
+            NextBtn.disabled = playersList.length < 1;
+            addPlayerBtn.disabled = playersList.length >= 4;
+        }
+
+        DeleteBtn.addEventListener('click', () =>{
+            playersList.length = 0;
+            Object.keys(playersScores).forEach(player => delete playersScores[player]);
+            updatePlayerList();
+        })
+
+        addPlayerBtn.addEventListener('click', () =>{
+            if(playersList.length < 4){
+                const playerName = prompt('Enter your name please');
+                if(playerName && playerName.trim() != ''){
+                    playersList.push(playerName.trim());
+                    updatePlayerList();
+                }
+                else{
+                    alert('Please enter a correct name');
+                }
+            }
+        });
+
+        NextBtn.addEventListener('click',() =>{
+            showScreen(1);
+        });
+
+        BackBtn.addEventListener('click', () =>{
+            playersList.length=0;
+            updatePlayerList();
+            showScreen(0);
+        });
+
+        StartGameBtn.addEventListener('click', () => {
+            Subject = document.getElementById('subject').value;
+            nbQuestion = parseInt(document.getElementById('nbQuestions').value, 10);
+            if(Subject == 'Mixed'){
+                QuestionsSelected = Object.values(QuestionsList).flat().sort(() => 0.5 - Math.random()).slice(0, nbQuestion);
+            }
+            else{
+                QuestionsSelected = QuestionsList[Subject].slice(0, nbQuestion);
+            }
+            playerIndex = 0;
+            questionIndex = 0;
+            TimeLeft = 10;
+            ShowQuestion();
+            showScreen(2);
+        });
+
+        function Time(){
+            Timer.textContent = `Time left : ${TimeLeft}s`;
+            timer = setInterval(() =>{
+                TimeLeft--;
+                Timer.textContent = `Time left : ${TimeLeft}s`;
+                if(TimeLeft <=0){
+                    clearInterval(timer);
+                    alert("To slow !");
+                    NextQuestion();
+                }
+            }, 1000);
+        }
+
+        function TimeReset(){
+            clearInterval(timer);
+            TimeLeft = 10;
+        }
+
+        function ShowQuestion(){
+            TimeReset();
+            Time();
+            const player = playersList[playerIndex];
+            const question = QuestionsSelected[questionIndex];
+            CurrentPlayer.textContent = `Player : ${player}`;
+            Question.textContent = question.question;
+            Answers.innerHTML = '';
+            question.options.forEach((option,index) =>{
+                const answersProp = document.createElement('li');
+                const optBtn = document.createElement('button');
+                optBtn.textContent = option;
+                optBtn.dataset.index = index;
+                answersProp.appendChild(optBtn);
+                Answers.appendChild(answersProp);
+
+                optBtn.addEventListener('click', () =>{
+                    if(parseInt(optBtn.dataset.index, 10) == question.answer){
+                        alert("Correct !");
+                        playersScores[player] = playersScores + 10;
+                    }
+                    else{
+                        const res = question.answer+1;
+                        alert("Incorrect ! the answer was the number "+res);
+                    }
+                    NextQuestion();
+                });
+            });
+        }
+
+        function NextQuestion(){
+            playerIndex++;
+            if(playerIndex >= playersList.length){
+                playerIndex = 0;
+                questionIndex++;
+            }
+            if(questionIndex>= QuestionsSelected.length){
+                ShowResults();
+                return;
+            }
+            ShowQuestion();
+        }
+
+        function ShowResults(){
+            showScreen(3);
+            TimeReset();
+            Results.innerHTML = '';
+            const orderedListPlayers = Object.entries(playersScores).sort(([,A],[,B]) => B - A);
+            orderedListPlayers.forEach(([player, score], index) =>{
+                const oList = document.createElement('li');
+                oList.textContent = `${player} : ${score} pts !`;
+                Results.appendChild(oList);
+            });
+        }
+
+        RestartBtn.addEventListener('click', () => {
+            showScreen(0);
+            TimeReset();
+            playersList.length = 0;
+            Object.keys(playersScores).forEach(player => delete playersScores[player]);
+            QuestionsSelected = [];
+            playerIndex = 0;
+            questionIndex=0;
+            Subject = '';
+            nbQuestion = 3;
+            updatePlayerList();
+        });
+
+
+
+        updatePlayerList();
+    </script>
+    </body>
+</html>
